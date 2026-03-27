@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Web Flasher</title>
+    <!-- Official esptool-js bundle from CDN -->
+    <script src="https://unpkg.com"></script>
+    <style>
+        :root { --primary: #2563eb; --error: #ef4444; --bg: #f1f5f9; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { margin-top: 0; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        .status-box { padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; display: none; }
+        .error { display: block; background: #fee2e2; color: var(--error); border: 1px solid #fecaca; }
+        .input-group { margin: 20px 0; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #475569; }
+        input[type="file"] { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; }
+        button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 16px; }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
+        #log { background: #0f172a; color: #38bdf8; padding: 15px; border-radius: 6px; height: 200px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; margin-top: 20px; white-space: pre-wrap; }
+        .warning-text { font-size: 12px; color: #64748b; margin-top: 10px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>ESP32 Online Installer</h2>
+    
+    <!-- Security Warning Box -->
+    <div id="securityAlert" class="status-box error"></div>
+
+    <div class="input-group">
+        <label>1. Выберите файл прошивки (.bin):</label>
+        <input type="file" id="fileInput" accept=".bin">
+    </div>
+
+    <button id="flashBtn">Подключить и Прошить</button>
+    
+    <div id="log">Система готова. Ожидание действий...</div>
+    <p class="warning-text">Используйте Chrome или Edge. Требуется HTTPS соединение.</p>
+</div>
+
+<script>
+    const flashBtn = document.getElementById('flashBtn');
+    const fileInput = document.getElementById('fileInput');
+    const logDiv = document.getElementById('log');
+    const alertDiv = document.getElementById('securityAlert');
+
+    // --- Helper: Logging ---
+    function log(msg) {
+        const time = new Date().toLocaleTimeString();
+        logDiv.innerText += `[${time}] ${msg}\n`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    // --- 1. Compatibility Check (Crucial for Online use) ---
+    window.onload = () => {
+        let errorMsg = "";
+
+        if (!("serial" in navigator)) {
+            errorMsg = "❌ Браузер не поддерживает Web Serial API. Используйте Chrome или Edge.";
+        } else if (window.location.protocol === 'file:') {
+            errorMsg = "❌ Ошибка безопасности: Нельзя запускать файл прямо с диска. Используйте локальный сервер (localhost) или HTTPS.";
+        } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+            errorMsg = "❌ Web Serial требует защищенное соединение (HTTPS).";
+        }
+
+        if (errorMsg) {
+            alertDiv.innerText = errorMsg;
+            alertDiv.style.display = "block";
+            flashBtn.disabled = true;
+        }
+    };
+
+    // --- 2. Flashing Logic ---
+    flashBtn.onclick = async () => {
+        if (fileInput.files.length === 0) {
+            alert("Пожалуйста, сначала выберите .bin файл!");
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+
+        reader.onload = async (e) => {
+            const buffer = e.target.result;
+            let transport;
+
+            try {
+                log("Запрос доступа к COM-порту...");
+                const port = await navigator.serial.requestPort();
+                
+                transport = new esptooljs.Transport(port);
+                const esploader = new esptooljs.ESPLoader(transport, 115200);
+
+                log("Синхронизация с ESP32...");
+                await esploader.main_fn();
+                log(`Устройство найдено: ${esploader.chip}`);
+
+                log("Начало записи прошивки в 0x10000...");
+                flashBtn.disabled = true;
+
+                await esploader.write_flash({
+                    fileArray: [{ data: buffer, address: 0x10000 }],
+                    flash_size: 'keep',
+                    reportProgress: (processed, total) => {
+                        const progress = Math.round((processed / total) * 100);
+                        flashBtn.innerText = `Прошивка: ${progress}%`;
+                    }
+                });
+
+                log("✅ Успешно! Перезагрузите устройство кнопкой EN/RESET.");
+            } catch (err) {
+                log("ОШИБКА: " + err.message);
+                console.error(err);
+            } finally {
+                if (transport) await transport.disconnect();
+                flashBtn.disabled = false;
+                flashBtn.innerText = "Подключить и Прошить";
+            }
+        };
+
+        // Read as binary string (required by esptool-js)
+        reader.readAsBinaryString(file);
+    };
+</script>
+
+</body>
+</html>
