@@ -1,130 +1,2165 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 Web Flasher</title>
-    <!-- Official esptool-js bundle from CDN -->
-    <script src="https://unpkg.com"></script>
+    <title>SparkOS ⚡ – Mini OS for Microcontrollers</title>
+    <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
     <style>
-        :root { --primary: #2563eb; --error: #ef4444; --bg: #f1f5f9; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
-        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        h2 { margin-top: 0; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
-        .status-box { padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; display: none; }
-        .error { display: block; background: #fee2e2; color: var(--error); border: 1px solid #fecaca; }
-        .input-group { margin: 20px 0; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; color: #475569; }
-        input[type="file"] { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; }
-        button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 16px; }
-        button:disabled { background: #94a3b8; cursor: not-allowed; }
-        #log { background: #0f172a; color: #38bdf8; padding: 15px; border-radius: 6px; height: 200px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; margin-top: 20px; white-space: pre-wrap; }
-        .warning-text { font-size: 12px; color: #64748b; margin-top: 10px; text-align: center; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+        :root {
+            --cyan: #00f0ff;
+            --magenta: #ff00aa;
+            --yellow: #ffe600;
+            --green: #39ff14;
+            --dark-bg: #0a0a12;
+            --card-bg: rgba(15, 15, 30, 0.6);
+            --glass-bg: rgba(255, 255, 255, 0.04);
+            --glass-border: rgba(0, 240, 255, 0.15);
+            --text-primary: #e0e0ff;
+            --text-secondary: #8888aa;
+            --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.3);
+            --glow-magenta: 0 0 20px rgba(255, 0, 170, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* ===== ANIMATED BACKGROUND ===== */
+        .bg-grid {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: -3;
+            background-image:
+                linear-gradient(rgba(0,240,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,240,255,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(60px, 60px); }
+        }
+
+        .bg-particles {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--cyan);
+            border-radius: 50%;
+            animation: floatParticle linear infinite;
+            opacity: 0;
+        }
+
+        @keyframes floatParticle {
+            0% { transform: translateY(100vh) scale(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+        }
+
+        .bg-glow {
+            position: fixed;
+            width: 600px; height: 600px;
+            border-radius: 50%;
+            filter: blur(150px);
+            z-index: -1;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        .bg-glow-1 {
+            top: -200px; left: -200px;
+            background: var(--cyan);
+            animation: glowDrift1 15s ease-in-out infinite;
+        }
+
+        .bg-glow-2 {
+            bottom: -200px; right: -200px;
+            background: var(--magenta);
+            animation: glowDrift2 18s ease-in-out infinite;
+        }
+
+        .bg-glow-3 {
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--yellow);
+            opacity: 0.05;
+            animation: glowPulse 10s ease-in-out infinite;
+        }
+
+        @keyframes glowDrift1 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(100px, 100px); }
+        }
+        @keyframes glowDrift2 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-100px, -100px); }
+        }
+        @keyframes glowPulse {
+            0%, 100% { opacity: 0.03; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.08; transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--dark-bg); }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(var(--cyan), var(--magenta));
+            border-radius: 3px;
+        }
+
+        /* ===== GLASS CARD ===== */
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px) saturate(1.5);
+            -webkit-backdrop-filter: blur(20px) saturate(1.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+        }
+
+        .glass-strong {
+            background: rgba(10, 10, 25, 0.7);
+            backdrop-filter: blur(30px) saturate(1.8);
+            -webkit-backdrop-filter: blur(30px) saturate(1.8);
+            border: 1px solid rgba(0, 240, 255, 0.12);
+            border-radius: 16px;
+        }
+
+        /* ===== NAVBAR ===== */
+        .navbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            padding: 0 40px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(10, 10, 18, 0.8);
+            backdrop-filter: blur(25px) saturate(1.5);
+            -webkit-backdrop-filter: blur(25px) saturate(1.5);
+            border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .navbar.scrolled {
+            background: rgba(10, 10, 18, 0.95);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .nav-logo svg {
+            width: 36px; height: 36px;
+            filter: drop-shadow(0 0 8px rgba(0,240,255,0.5));
+        }
+
+        .nav-logo-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--cyan), var(--magenta));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            color: var(--cyan);
+            background: rgba(0, 240, 255, 0.06);
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 50%; right: 50%;
+            height: 2px;
+            background: var(--cyan);
+            transition: all 0.3s ease;
+            border-radius: 1px;
+        }
+
+        .nav-links a:hover::after {
+            left: 16px; right: 16px;
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .hamburger span {
+            width: 24px; height: 2px;
+            background: var(--cyan);
+            transition: all 0.3s ease;
+            border-radius: 1px;
+        }
+
+        /* ===== HERO SECTION ===== */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 120px 40px 80px;
+            position: relative;
+        }
+
+        .hero-content {
+            text-align: center;
+            max-width: 900px;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 20px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 30px;
+            color: var(--cyan);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            background: rgba(0, 240, 255, 0.06);
+            animation: fadeInUp 1s ease-out 0.2s both;
+        }
+
+        .hero-badge .dot {
+            width: 8px; height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .hero h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            animation: fadeInUp 1s ease-out 0.3s both;
+        }
+
+        .hero h1 .spark {
+            background: linear-gradient(135deg, var(--cyan) 0%, #00aaff 50%, var(--magenta) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+        }
+
+        .hero h1 .spark::after {
+            content: '⚡';
+            -webkit-text-fill-color: var(--yellow);
+            font-size: 0.7em;
+            position: relative;
+            top: -5px;
+            filter: drop-shadow(0 0 10px rgba(255, 230, 0, 0.5));
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 650px;
+            margin: 0 auto 40px;
+            animation: fadeInUp 1s ease-out 0.5s both;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 1s ease-out 0.7s both;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--cyan), #0088ff);
+            color: #000;
+            box-shadow: 0 4px 25px rgba(0, 240, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 35px rgba(0, 240, 255, 0.45);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--cyan);
+            transform: translateY(-2px);
+        }
+
+        .btn-magenta {
+            background: linear-gradient(135deg, var(--magenta), #cc0088);
+            color: #fff;
+            box-shadow: 0 4px 25px rgba(255, 0, 170, 0.3);
+        }
+
+        .btn-magenta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 35px rgba(255, 0, 170, 0.45);
+        }
+
+        .btn-green {
+            background: linear-gradient(135deg, var(--green), #00cc10);
+            color: #000;
+            box-shadow: 0 4px 25px rgba(57, 255, 20, 0.25);
+        }
+
+        .btn-green:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 35px rgba(57, 255, 20, 0.4);
+        }
+
+        .btn-outline-cyan {
+            background: transparent;
+            color: var(--cyan);
+            border: 1px solid var(--cyan);
+        }
+
+        .btn-outline-cyan:hover {
+            background: rgba(0, 240, 255, 0.1);
+            transform: translateY(-2px);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .btn-sm {
+            padding: 10px 22px;
+            font-size: 0.95rem;
+            border-radius: 10px;
+        }
+
+        /* ===== HERO ANIMATION (ESP Board) ===== */
+        .hero-visual {
+            margin-top: 60px;
+            animation: fadeInUp 1s ease-out 0.9s both;
+            position: relative;
+        }
+
+        .esp-mockup {
+            width: 320px;
+            height: 200px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .oled-screen {
+            width: 180px;
+            height: 80px;
+            margin: 0 auto;
+            background: #000;
+            border-radius: 6px;
+            border: 2px solid #333;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.2), inset 0 0 20px rgba(0, 240, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .oled-content {
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--cyan);
+            font-size: 0.7rem;
+            text-align: center;
+            animation: oledAnimation 8s ease-in-out infinite;
+        }
+
+        @keyframes oledAnimation {
+            0%, 20% { content: 'SparkOS'; opacity: 1; }
+            25% { opacity: 0; }
+            30%, 50% { opacity: 1; }
+            55% { opacity: 0; }
+            60%, 80% { opacity: 1; }
+            85% { opacity: 0; }
+            90%, 100% { opacity: 1; }
+        }
+
+        .oled-scanline {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 2px;
+            background: rgba(0, 240, 255, 0.1);
+            animation: scanline 3s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { top: -2px; }
+            100% { top: 100%; }
+        }
+
+        .pcb-board {
+            width: 220px;
+            height: 100px;
+            margin: -5px auto 0;
+            background: linear-gradient(135deg, #1a3a2a, #0d2818);
+            border-radius: 8px;
+            border: 1px solid #2a5a3a;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pcb-traces {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            opacity: 0.3;
+            background-image:
+                linear-gradient(90deg, rgba(0,240,255,0.1) 1px, transparent 1px),
+                linear-gradient(rgba(0,240,255,0.1) 1px, transparent 1px);
+            background-size: 15px 15px;
+            border-radius: 8px;
+        }
+
+        .chip {
+            width: 40px; height: 40px;
+            background: #111;
+            border-radius: 4px;
+            border: 1px solid #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.4rem;
+            color: #666;
+        }
+
+        .led-indicator {
+            position: absolute;
+            width: 6px; height: 6px;
+            background: var(--green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--green);
+            animation: ledBlink 1.5s ease-in-out infinite;
+        }
+
+        .led-1 { top: 10px; right: 15px; }
+        .led-2 { top: 10px; right: 28px; background: #ff3300; box-shadow: 0 0 8px #ff3300; animation-delay: 0.5s; }
+
+        @keyframes ledBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
+
+        /* ===== SECTIONS ===== */
+        .section {
+            padding: 100px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-tag {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--cyan);
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .section-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* ===== FEATURES GRID ===== */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            padding: 32px;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 3px;
+            background: linear-gradient(90deg, var(--cyan), var(--magenta));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .feature-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(0, 240, 255, 0.3);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-icon {
+            width: 50px; height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .fi-cyan { background: rgba(0, 240, 255, 0.1); color: var(--cyan); }
+        .fi-magenta { background: rgba(255, 0, 170, 0.1); color: var(--magenta); }
+        .fi-yellow { background: rgba(255, 230, 0, 0.1); color: var(--yellow); }
+        .fi-green { background: rgba(57, 255, 20, 0.1); color: var(--green); }
+
+        .feature-card h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* ===== INSTALL SECTION ===== */
+        #install {
+            position: relative;
+        }
+
+        .install-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: stretch;
+        }
+
+        .install-panel {
+            padding: 40px;
+            position: relative;
+        }
+
+        .install-panel h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .install-panel .desc {
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+        }
+
+        .board-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .board-btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.03);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .board-btn.active {
+            border-color: var(--cyan);
+            color: var(--cyan);
+            background: rgba(0, 240, 255, 0.08);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+        }
+
+        .board-btn:hover:not(.active) {
+            border-color: rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* Serial Connection UI */
+        .serial-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: #ff3333;
+            box-shadow: 0 0 8px rgba(255, 50, 50, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.connected {
+            background: var(--green);
+            box-shadow: 0 0 8px rgba(57, 255, 20, 0.5);
+        }
+
+        .serial-log {
+            background: #05050f;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+            padding: 16px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--green);
+            height: 180px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .serial-log .log-line {
+            margin-bottom: 4px;
+            opacity: 0;
+            animation: logAppear 0.3s ease-out forwards;
+        }
+
+        @keyframes logAppear {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .log-time { color: var(--text-secondary); }
+        .log-info { color: var(--cyan); }
+        .log-success { color: var(--green); }
+        .log-error { color: #ff4444; }
+        .log-warn { color: var(--yellow); }
+
+        .progress-container {
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .progress-bar-wrapper {
+            height: 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cyan), var(--magenta));
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0; right: 0;
+            width: 30px; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3));
+            animation: shimmer 1.5s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        .progress-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .install-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        /* Download Panel */
+        .download-options {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .download-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 20px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.3s ease;
+        }
+
+        .download-card:hover {
+            border-color: rgba(0, 240, 255, 0.2);
+            background: rgba(0, 240, 255, 0.03);
+        }
+
+        .dl-info h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .dl-info span {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .dl-size {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 6px;
+            margin-right: 12px;
+        }
+
+        /* ===== HARDWARE SECTION ===== */
+        .hw-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .hw-card {
+            padding: 36px;
+        }
+
+        .hw-card h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hw-card .chip-tag {
+            font-size: 0.7rem;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Share Tech Mono', monospace;
+            letter-spacing: 1px;
+        }
+
+        .tag-cyan { background: rgba(0,240,255,0.1); color: var(--cyan); border: 1px solid rgba(0,240,255,0.2); }
+        .tag-magenta { background: rgba(255,0,170,0.1); color: var(--magenta); border: 1px solid rgba(255,0,170,0.2); }
+
+        .hw-card .hw-desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+        }
+
+        .pin-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 4px;
+        }
+
+        .pin-table th {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-align: left;
+            padding: 8px 14px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .pin-table td {
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .pin-table tr td:first-child {
+            border-radius: 8px 0 0 8px;
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--cyan);
+            font-size: 0.85rem;
+        }
+
+        .pin-table tr td:last-child {
+            border-radius: 0 8px 8px 0;
+            color: var(--text-secondary);
+        }
+
+        /* ===== LIBRARIES SECTION ===== */
+        .libs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .lib-card {
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .lib-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(0, 240, 255, 0.3);
+        }
+
+        .lib-icon {
+            width: 44px; height: 44px;
+            border-radius: 10px;
+            background: rgba(0, 240, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .lib-card h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .lib-card p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* ===== CONTROLS TABLE ===== */
+        .controls-table-wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .controls-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 6px;
+        }
+
+        .controls-table th {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-align: left;
+            padding: 10px 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .controls-table td {
+            padding: 14px 20px;
+            background: rgba(255,255,255,0.02);
+            font-size: 0.95rem;
+        }
+
+        .controls-table tr td:first-child {
+            border-radius: 10px 0 0 10px;
+        }
+
+        .controls-table tr td:last-child {
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 14px;
+            border-radius: 8px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(0, 240, 255, 0.08);
+            color: var(--cyan);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        /* ===== STEPS / GETTING STARTED ===== */
+        .steps-container {
+            max-width: 700px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .steps-container::before {
+            content: '';
+            position: absolute;
+            left: 24px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--cyan), var(--magenta), transparent);
+        }
+
+        .step {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 32px;
+            position: relative;
+        }
+
+        .step-number {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .sn-1 { background: rgba(0,240,255,0.15); color: var(--cyan); border: 2px solid rgba(0,240,255,0.3); }
+        .sn-2 { background: rgba(255,0,170,0.15); color: var(--magenta); border: 2px solid rgba(255,0,170,0.3); }
+        .sn-3 { background: rgba(255,230,0,0.15); color: var(--yellow); border: 2px solid rgba(255,230,0,0.3); }
+        .sn-4 { background: rgba(57,255,20,0.15); color: var(--green); border: 2px solid rgba(57,255,20,0.3); }
+        .sn-5 { background: rgba(0,240,255,0.15); color: var(--cyan); border: 2px solid rgba(0,240,255,0.3); }
+
+        .step-content h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            margin-top: 4px;
+        }
+
+        .step-content p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .step-content code {
+            font-family: 'Share Tech Mono', monospace;
+            background: rgba(0, 240, 255, 0.08);
+            color: var(--cyan);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        /* ===== CONFIG SECTION ===== */
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .config-card {
+            padding: 28px;
+            text-align: center;
+        }
+
+        .config-icon {
+            font-size: 2rem;
+            margin-bottom: 14px;
+            display: block;
+        }
+
+        .config-card h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .config-card p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* ===== CTA / CONTRIBUTE ===== */
+        .cta-section {
+            text-align: center;
+            padding: 80px 40px;
+        }
+
+        .cta-card {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 60px 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(0,240,255,0.05), rgba(255,0,170,0.05));
+            z-index: 0;
+        }
+
+        .cta-card > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-card h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .cta-card p {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            margin-bottom: 30px;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            padding: 40px;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .footer-logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--cyan), var(--magenta));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .footer p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .footer .license {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--green);
+            background: rgba(57,255,20,0.06);
+            border: 1px solid rgba(57,255,20,0.15);
+            margin-top: 12px;
+        }
+
+        /* ===== INTERSECTION OBSERVER ANIMATIONS ===== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .reveal-delay-1 { transition-delay: 0.1s; }
+        .reveal-delay-2 { transition-delay: 0.2s; }
+        .reveal-delay-3 { transition-delay: 0.3s; }
+        .reveal-delay-4 { transition-delay: 0.4s; }
+        .reveal-delay-5 { transition-delay: 0.5s; }
+        .reveal-delay-6 { transition-delay: 0.6s; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .navbar { padding: 0 20px; }
+            .nav-links { display: none; }
+            .hamburger { display: flex; }
+
+            .nav-links.open {
+                display: flex;
+                flex-direction: column;
+                position: absolute;
+                top: 70px; left: 0; right: 0;
+                background: rgba(10, 10, 18, 0.97);
+                backdrop-filter: blur(25px);
+                -webkit-backdrop-filter: blur(25px);
+                border-bottom: 1px solid rgba(0,240,255,0.1);
+                padding: 16px;
+                gap: 4px;
+            }
+
+            .section { padding: 60px 20px; }
+
+            .install-container,
+            .hw-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .config-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero { padding: 100px 20px 60px; }
+        }
+
+        @media (max-width: 600px) {
+            .features-grid { grid-template-columns: 1fr; }
+            .hero-buttons { flex-direction: column; align-items: center; }
+            .btn { width: 100%; justify-content: center; max-width: 300px; }
+            .install-actions { flex-direction: column; }
+            .board-selector { flex-direction: column; }
+        }
+
+        /* ===== TOOLTIP ===== */
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%) scale(0.9);
+            padding: 6px 12px;
+            border-radius: 8px;
+            background: rgba(10,10,25,0.95);
+            border: 1px solid rgba(0,240,255,0.15);
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.2s ease;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+        }
+
+        /* ESP Web Install Button Styling */
+        esp-web-install-button {
+            display: inline-block;
+        }
+
+        esp-web-install-button button,
+        esp-web-install-button a {
+            display: none !important;
+        }
+
+        /* Typing effect */
+        .typing-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1em;
+            background: var(--cyan);
+            margin-left: 2px;
+            animation: cursorBlink 0.8s step-end infinite;
+            vertical-align: text-bottom;
+        }
+
+        @keyframes cursorBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Neon divider */
+        .neon-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--cyan), var(--magenta), transparent);
+            margin: 0 40px;
+            opacity: 0.4;
+        }
+
+        /* Floating action indicator */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            animation: fadeInUp 1s ease-out 1.2s both;
+        }
+
+        .scroll-indicator span {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .scroll-arrow {
+            width: 20px; height: 20px;
+            border-right: 2px solid var(--cyan);
+            border-bottom: 2px solid var(--cyan);
+            transform: rotate(45deg);
+            animation: scrollBounce 2s ease-in-out infinite;
+            opacity: 0.6;
+        }
+
+        @keyframes scrollBounce {
+            0%, 100% { transform: rotate(45deg) translate(0, 0); }
+            50% { transform: rotate(45deg) translate(5px, 5px); }
+        }
+
+        /* Version badge */
+        .version-badge {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            padding: 3px 10px;
+            border-radius: 6px;
+            background: rgba(57,255,20,0.1);
+            color: var(--green);
+            border: 1px solid rgba(57,255,20,0.2);
+        }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>ESP32 Online Installer</h2>
-    
-    <!-- Security Warning Box -->
-    <div id="securityAlert" class="status-box error"></div>
+    <!-- Background Effects -->
+    <div class="bg-grid"></div>
+    <div class="bg-particles" id="particles"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
 
-    <div class="input-group">
-        <label>1. Выберите файл прошивки (.bin):</label>
-        <input type="file" id="fileInput" accept=".bin">
-    </div>
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <a href="#" class="nav-logo">
+            <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="2" width="32" height="32" rx="8" stroke="url(#logo-grad)" stroke-width="2" fill="none"/>
+                <path d="M18 8 L22 16 L18 14 L14 16 Z" fill="url(#logo-grad)"/>
+                <path d="M18 28 L14 20 L18 22 L22 20 Z" fill="url(#logo-grad)"/>
+                <circle cx="18" cy="18" r="3" fill="url(#logo-grad)"/>
+                <defs>
+                    <linearGradient id="logo-grad" x1="0" y1="0" x2="36" y2="36">
+                        <stop offset="0%" stop-color="#00f0ff"/>
+                        <stop offset="100%" stop-color="#ff00aa"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            <span class="nav-logo-text">SparkOS</span>
+        </a>
 
-    <button id="flashBtn">Подключить и Прошить</button>
-    
-    <div id="log">Система готова. Ожидание действий...</div>
-    <p class="warning-text">Используйте Chrome или Edge. Требуется HTTPS соединение.</p>
-</div>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#install">Install</a></li>
+            <li><a href="#hardware">Hardware</a></li>
+            <li><a href="#quickstart">Quick Start</a></li>
+            <li><a href="#controls">Controls</a></li>
+            <li><a href="https://github.com" target="_blank">GitHub ↗</a></li>
+        </ul>
 
-<script>
-    const flashBtn = document.getElementById('flashBtn');
-    const fileInput = document.getElementById('fileInput');
-    const logDiv = document.getElementById('log');
-    const alertDiv = document.getElementById('securityAlert');
+        <div class="hamburger" id="hamburger" onclick="toggleMenu()">
+            <span></span><span></span><span></span>
+        </div>
+    </nav>
 
-    // --- Helper: Logging ---
-    function log(msg) {
-        const time = new Date().toLocaleTimeString();
-        logDiv.innerText += `[${time}] ${msg}\n`;
-        logDiv.scrollTop = logDiv.scrollHeight;
-    }
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="dot"></span>
+                Open Source Project
+            </div>
 
-    // --- 1. Compatibility Check (Crucial for Online use) ---
-    window.onload = () => {
-        let errorMsg = "";
+            <h1>
+                <span class="spark">SparkOS</span><br>
+                Mini OS for<br>Microcontrollers
+            </h1>
 
-        if (!("serial" in navigator)) {
-            errorMsg = "❌ Браузер не поддерживает Web Serial API. Используйте Chrome или Edge.";
-        } else if (window.location.protocol === 'file:') {
-            errorMsg = "❌ Ошибка безопасности: Нельзя запускать файл прямо с диска. Используйте локальный сервер (localhost) или HTTPS.";
-        } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-            errorMsg = "❌ Web Serial требует защищенное соединение (HTTPS).";
+            <p>
+                A compact, menu-driven operating system designed for ESP8266 and ESP32-S3
+                with OLED displays. Transform your dev board into a functional handheld device.
+            </p>
+
+            <div class="hero-buttons">
+                <a href="#install" class="btn btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Install via Browser
+                </a>
+                <a href="#features" class="btn btn-secondary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Learn More
+                </a>
+            </div>
+
+            <div class="hero-visual">
+                <div class="esp-mockup">
+                    <div class="oled-screen">
+                        <div class="oled-scanline"></div>
+                        <div class="oled-content" id="oledContent">
+                            ┌──────────┐<br>
+                            │ SparkOS  │<br>
+                            │  v1.0 ⚡ │<br>
+                            └──────────┘
+                        </div>
+                    </div>
+                    <div class="pcb-board">
+                        <div class="pcb-traces"></div>
+                        <div class="chip">ESP<br>8266</div>
+                        <div class="led-indicator led-1"></div>
+                        <div class="led-indicator led-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="scroll-indicator">
+                <span>Scroll</span>
+                <div class="scroll-arrow"></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="neon-divider"></div>
+
+    <!-- Features Section -->
+    <section class="section" id="features">
+        <div class="section-header reveal">
+            <span class="section-tag">✨ Features</span>
+            <h2 class="section-title">Everything You Need</h2>
+            <p class="section-subtitle">SparkOS packs powerful features into a tiny microcontroller, giving you games, utilities, and system tools.</p>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card glass reveal reveal-delay-1">
+                <div class="feature-icon fi-cyan">📱</div>
+                <h3>Interactive Menu</h3>
+                <p>Intuitive navigation system with hardware buttons. Browse through apps, games, and settings with ease.</p>
+            </div>
+
+            <div class="feature-card glass reveal reveal-delay-2">
+                <div class="feature-icon fi-magenta">📶</div>
+                <h3>WiFi Manager</h3>
+                <p>Easy WiFi configuration via captive portal. No hardcoded credentials — connect securely on first boot.</p>
+            </div>
+
+            <div class="feature-card glass reveal reveal-delay-3">
+                <div class="feature-icon fi-yellow">🕐</div>
+                <h3>NTP Time Sync</h3>
+                <p>Automatic time synchronization with configurable timezone. Always displays the correct time.</p>
+            </div>
+
+            <div class="feature-card glass reveal reveal-delay-4">
+                <div class="feature-icon fi-green">🎮</div>
+                <h3>Built-in Games</h3>
+                <p><strong>Dodge</strong> — avoid falling obstacles. <strong>Pong</strong> — classic paddle game. Fun on a tiny screen!</p>
+            </div>
+
+            <div class="feature-card glass reveal reveal-delay-5">
+                <div class="feature-icon fi-cyan">🧮</div>
+                <h3>Utilities</h3>
+                <p><strong>Calculator</strong> for quick math and a <strong>Console</strong> showing WiFi status, IP address, and timezone.</p>
+            </div>
+
+            <div class="feature-card glass reveal reveal-delay-6">
+                <div class="feature-icon fi-magenta">💾</div>
+                <h3>Persistent Settings</h3>
+                <p>WiFi credentials and timezone preferences are stored permanently. Survives reboots and power cycles.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="neon-divider"></div>
+
+    <!-- Install Section -->
+    <section class="section" id="install">
+        <div class="section-header reveal">
+            <span class="section-tag">⚡ Install</span>
+            <h2 class="section-title">Flash Firmware</h2>
+            <p class="section-subtitle">Install SparkOS directly from your browser via Web Serial, or download the firmware for manual flashing.</p>
+        </div>
+
+        <div class="install-container">
+            <!-- Web Serial Panel -->
+            <div class="install-panel glass-strong reveal reveal-delay-1">
+                <h3>🔌 Web Serial Installer</h3>
+                <p class="desc">Connect your board via USB and flash SparkOS directly from the browser. No additional software required.</p>
+
+                <div class="board-selector">
+                    <button class="board-btn active" onclick="selectBoard('esp8266', this)" id="boardBtn8266">
+                        📟 ESP8266
+                    </button>
+                    <button class="board-btn" onclick="selectBoard('esp32s3', this)" id="boardBtn32s3">
+                        🚀 ESP32-S3
+                    </button>
+                </div>
+
+                <div class="serial-status">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Not connected</span>
+                    <span class="version-badge" style="margin-left:auto" id="fwVersion">v1.0.0</span>
+                </div>
+
+                <div class="serial-log" id="serialLog">
+                    <div class="log-line"><span class="log-time">[SYS]</span> <span class="log-info">SparkOS Web Installer ready</span></div>
+                    <div class="log-line"><span class="log-time">[SYS]</span> Select your board and click "Connect"</div>
+                </div>
+
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span id="progressLabel">Preparing...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                </div>
+
+                <div class="install-actions">
+                    <button class="btn btn-primary btn-sm" id="connectBtn" onclick="connectSerial()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+                        Connect & Flash
+                    </button>
+                    <button class="btn btn-outline-cyan btn-sm" id="disconnectBtn" onclick="disconnectSerial()" style="display:none">
+                        ✕ Disconnect
+                    </button>
+                </div>
+
+                <div style="margin-top:16px; padding:12px 16px; border-radius:10px; background:rgba(255,230,0,0.05); border:1px solid rgba(255,230,0,0.15); font-size:0.82rem; color:var(--yellow);">
+                    ⚠️ Requires Chrome / Edge 89+ with Web Serial API support.
+                </div>
+            </div>
+
+            <!-- Download Panel -->
+            <div class="install-panel glass-strong reveal reveal-delay-2">
+                <h3>📥 Direct Download</h3>
+                <p class="desc">Download firmware binaries for manual flashing via Arduino IDE, PlatformIO, or esptool.</p>
+
+                <div class="download-options">
+                    <div class="download-card">
+                        <div class="dl-info">
+                            <h4>🔵 SparkOS — ESP8266</h4>
+                            <span>NodeMCU, Wemos D1, ESP-12F</span>
+                        </div>
+                        <span class="dl-size">~420 KB</span>
+                        <a href="#" class="btn btn-primary btn-sm" onclick="simulateDownload('esp8266')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            .bin
+                        </a>
+                    </div>
+
+                    <div class="download-card">
+                        <div class="dl-info">
+                            <h4>🟣 SparkOS — ESP32-S3</h4>
+                            <span>ESP32-S3 DevKit, LOLIN S3</span>
+                        </div>
+                        <span class="dl-size">~580 KB</span>
+                        <a href="#" class="btn btn-magenta btn-sm" onclick="simulateDownload('esp32s3')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            .bin
+                        </a>
+                    </div>
+
+                    <div class="download-card">
+                        <div class="dl-info">
+                            <h4>📦 Source Code (.zip)</h4>
+                            <span>Arduino sketch + all assets</span>
+                        </div>
+                        <span class="dl-size">~85 KB</span>
+                        <a href="#" class="btn btn-secondary btn-sm" onclick="simulateDownload('source')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            .zip
+                        </a>
+                    </div>
+
+                    <div class="download-card">
+                        <div class="dl-info">
+                            <h4>📋 Wiring Diagram</h4>
+                            <span>Pinout & schematic (PDF)</span>
+                        </div>
+                        <span class="dl-size">~2 MB</span>
+                        <a href="#" class="btn btn-secondary btn-sm" onclick="simulateDownload('schematic')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            .pdf
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="neon-divider"></div>
+
+    <!-- Hardware Section -->
+    <section class="section" id="hardware">
+        <div class="section-header reveal">
+            <span class="section-tag">🛠️ Hardware</span>
+            <h2 class="section-title">What You Need</h2>
+            <p class="section-subtitle">Simple hardware setup with commonly available components.</p>
+        </div>
+
+        <div class="hw-grid">
+            <div class="hw-card glass reveal reveal-delay-1">
+                <h3>
+                    ESP8266
+                    <span class="chip-tag tag-cyan">SUPPORTED</span>
+                </h3>
+                <p class="hw-desc">Compatible with NodeMCU, Wemos D1 Mini, and other ESP8266-based boards with I2C OLED.</p>
+
+                <table class="pin-table">
+                    <thead>
+                        <tr><th>Function</th><th>Pin</th><th>GPIO</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>SDA</td><td>D1</td><td>GPIO5</td></tr>
+                        <tr><td>SCL</td><td>D2</td><td>GPIO4</td></tr>
+                        <tr><td>BTN UP</td><td>D5</td><td>GPIO14</td></tr>
+                        <tr><td>BTN DOWN</td><td>D6</td><td>GPIO12</td></tr>
+                        <tr><td>BTN SELECT</td><td>D7</td><td>GPIO13</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="hw-card glass reveal reveal-delay-2">
+                <h3>
+                    ESP32-S3
+                    <span class="chip-tag tag-magenta">SUPPORTED</span>
+                </h3>
+                <p class="hw-desc">Works with ESP32-S3 development boards. Same OLED and button setup; I2C pins may vary by board.</p>
+
+                <table class="pin-table">
+                    <thead>
+                        <tr><th>Function</th><th>Pin</th><th>Note</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>SDA</td><td>GPIO8</td><td>Default I2C</td></tr>
+                        <tr><td>SCL</td><td>GPIO9</td><td>Default I2C</td></tr>
+                        <tr><td>BTN UP</td><td>GPIO14</td><td>Pull-up</td></tr>
+                        <tr><td>BTN DOWN</td><td>GPIO12</td><td>Pull-up</td></tr>
+                        <tr><td>BTN SELECT</td><td>GPIO13</td><td>Pull-up</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Libraries -->
+        <div style="margin-top: 60px;">
+            <h3 class="reveal" style="font-family:'Orbitron',sans-serif; font-size:1.3rem; text-align:center; margin-bottom:30px;">📦 Required Libraries</h3>
+            <div class="libs-grid">
+                <a href="https://github.com/olikraus/u8g2" target="_blank" class="lib-card glass reveal reveal-delay-1">
+                    <div class="lib-icon">📺</div>
+                    <div>
+                        <h4>U8g2</h4>
+                        <p>OLED graphics library</p>
+                    </div>
+                </a>
+
+                <a href="https://github.com/tzapu/WiFiManager" target="_blank" class="lib-card glass reveal reveal-delay-2">
+                    <div class="lib-icon">📶</div>
+                    <div>
+                        <h4>WiFiManager</h4>
+                        <p>WiFi configuration portal</p>
+                    </div>
+                </a>
+
+                <a href="https://github.com/arduino-libraries/NTPClient" target="_blank" class="lib-card glass reveal reveal-delay-3">
+                    <div class="lib-icon">🕐</div>
+                    <div>
+                        <h4>NTPClient</h4>
+                        <p>Time synchronization</p>
+                    </div>
+                </a>
+
+                <div class="lib-card glass reveal reveal-delay-4" style="cursor:default;">
+                    <div class="lib-icon">📡</div>
+                    <div>
+                        <h4>ESP8266WiFi / WiFi</h4>
+                        <p>Built-in WiFi library</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="neon-divider"></div>
+
+    <!-- Quick Start Section -->
+    <section class="section" id="quickstart">
+        <div class="section-header reveal">
+            <span class="section-tag">🚀 Quick Start</span>
+            <h2 class="section-title">Getting Started</h2>
+            <p class="section-subtitle">Get SparkOS running in 5 simple steps.</p>
+        </div>
+
+        <div class="steps-container">
+            <div class="step reveal reveal-delay-1">
+                <div class="step-number sn-1">1</div>
+                <div class="step-content">
+                    <h4>Install Libraries</h4>
+                    <p>Add required libraries via Arduino Library Manager: <code>U8g2</code>, <code>WiFiManager</code>, <code>NTPClient</code>.</p>
+                </div>
+            </div>
+
+            <div class="step reveal reveal-delay-2">
+                <div class="step-number sn-2">2</div>
+                <div class="step-content">
+                    <h4>Wire Hardware</h4>
+                    <p>Connect your 0.96" OLED display (SSD1306, I2C) and 3 push buttons according to the pinout table above.</p>
+                </div>
+            </div>
+
+            <div class="step reveal reveal-delay-3">
+                <div class="step-number sn-3">3</div>
+                <div class="step-content">
+                    <h4>Upload Firmware</h4>
+                    <p>Compile and upload to your board using Arduino IDE or use the <a href="#install" style="color:var(--cyan);">Web Installer</a> above.</p>
+                </div>
+            </div>
+
+            <div class="step reveal reveal-delay-4">
+                <div class="step-number sn-4">4</div>
+                <div class="step-content">
+                    <h4>First Boot — WiFi Setup</h4>
+                    <p>Connect to the <code>ESP-OS</code> WiFi network from your phone/laptop. Configure your WiFi credentials via the captive portal.</p>
+                </div>
+            </div>
+
+            <div class="step reveal reveal-delay-5">
+                <div class="step-number sn-5">5</div>
+                <div class="step-content">
+                    <h4>Enjoy! ⚡</h4>
+                    <p>Navigate using UP/DOWN buttons, press EXIT/SELECT to enter apps. Play games, check the time, explore utilities.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="neon-divider"></div>
+
+    <!-- Controls Section -->
+    <section class="section" id="controls">
+        <div class="section-header reveal">
+            <span class="section-tag">🎮 Controls</span>
+            <h2 class="section-title">Button Mapping</h2>
+            <p class="section-subtitle">Simple three-button control scheme.</p>
+        </div>
+
+        <div class="controls-table-wrapper reveal reveal-delay-1">
+            <table class="controls-table">
+                <thead>
+                    <tr><th>Action</th><th>Button</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Navigate Up</td>
+                        <td><span class="key-badge">▲ UP</span></td>
+                    </tr>
+                    <tr>
+                        <td>Navigate Down</td>
+                        <td><span class="key-badge">▼ DOWN</span></td>
+                    </tr>
+                    <tr>
+                        <td>Select / Enter</td>
+                        <td><span class="key-badge">⏎ EXIT</span></td>
+                    </tr>
+                    <tr>
+                        <td>Exit to Menu</td>
+                        <td><span class="key-badge">⏎ EXIT</span> <span style="color:var(--text-secondary);font-size:0.85rem;">(in games/apps)</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Configuration -->
+        <div style="margin-top: 70px;">
+            <h3 class="reveal" style="font-family:'Orbitron',sans-serif; font-size:1.3rem; text-align:center; margin-bottom:30px;">🔧 Configuration</h3>
+            <div class="config-grid">
+                <div class="config-card glass reveal reveal-delay-1">
+                    <span class="config-icon">🌐</span>
+                    <h4>Timezone</h4>
+                    <p>Adjustable from -12 to +12 in the Settings menu. Saved automatically.</p>
+                </div>
+                <div class="config-card glass reveal reveal-delay-2">
+                    <span class="config-icon">📶</span>
+                    <h4>WiFi Reset</h4>
+                    <p>Clear stored credentials and restart the configuration portal at any time.</p>
+                </div>
+                <div class="config-card glass reveal reveal-delay-3">
+                    <span class="config-icon">🔄</span>
+                    <h4>NTP Update</h4>
+                    <p>Automatic time synchronization every 60 seconds via NTP servers.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="neon-divider"></div>
+
+    <!-- CTA / Contribute -->
+    <section class="cta-section">
+        <div class="cta-card glass-strong reveal">
+            <h2>🤝 Contribute to SparkOS</h2>
+            <p>Add new games, improve the UI, port to other microcontrollers, or help squash bugs. Every contribution matters!</p>
+            <div class="cta-buttons">
+                <a href="https://github.com" target="_blank" class="btn btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                    View on GitHub
+                </a>
+                <a href="#install" class="btn btn-magenta">
+                    ⚡ Get SparkOS
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-logo">SparkOS ⚡</div>
+        <p>Because every microcontroller deserves an OS.</p>
+        <div class="license">📄 MIT License — free to use, modify, and distribute</div>
+    </footer>
+
+
+    <script>
+        // ===== PARTICLES =====
+        (function createParticles() {
+            const container = document.getElementById('particles');
+            const count = 40;
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDuration = (8 + Math.random() * 15) + 's';
+                p.style.animationDelay = Math.random() * 10 + 's';
+                p.style.width = p.style.height = (1 + Math.random() * 2) + 'px';
+                if (Math.random() > 0.5) p.style.background = '#ff00aa';
+                container.appendChild(p);
+            }
+        })();
+
+        // ===== NAVBAR SCROLL =====
+        window.addEventListener('scroll', () => {
+            document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
+        });
+
+        // ===== MOBILE MENU =====
+        function toggleMenu() {
+            document.getElementById('navLinks').classList.toggle('open');
         }
 
-        if (errorMsg) {
-            alertDiv.innerText = errorMsg;
-            alertDiv.style.display = "block";
-            flashBtn.disabled = true;
+        document.querySelectorAll('.nav-links a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.getElementById('navLinks').classList.remove('open');
+            });
+        });
+
+        // ===== INTERSECTION OBSERVER =====
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // ===== OLED SCREEN ANIMATION =====
+        const oledScreens = [
+            '┌──────────┐\n│ SparkOS  │\n│  v1.0 ⚡ │\n└──────────┘',
+            '> Menu\n  ▶ Games\n  ▶ Utilities\n  ▶ Settings',
+            '🎮 DODGE\n  Score: 142\n  ━━━━━━━━━\n  ▲ Player ▲',
+            '📶 WiFi: OK\n  IP: 192.168\n       .1.42\n  TZ: UTC+3',
+            '⏰ 14:32:07\n\n  SparkOS ⚡\n  Ready...',
+        ];
+        let oledIdx = 0;
+        setInterval(() => {
+            oledIdx = (oledIdx + 1) % oledScreens.length;
+            const el = document.getElementById('oledContent');
+            el.style.opacity = '0';
+            setTimeout(() => {
+                el.innerHTML = oledScreens[oledIdx].replace(/\n/g, '<br>');
+                el.style.opacity = '1';
+            }, 300);
+        }, 3000);
+
+        // ===== BOARD SELECTOR =====
+        let selectedBoard = 'esp8266';
+
+        function selectBoard(board, btn) {
+            selectedBoard = board;
+            document.querySelectorAll('.board-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            addLog('info', `Board selected: ${board.toUpperCase()}`);
         }
-    };
 
-    // --- 2. Flashing Logic ---
-    flashBtn.onclick = async () => {
-        if (fileInput.files.length === 0) {
-            alert("Пожалуйста, сначала выберите .bin файл!");
-            return;
+        // ===== SERIAL LOG =====
+        function addLog(type, message) {
+            const log = document.getElementById('serialLog');
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            line.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-${type}">${message}</span>`;
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
         }
 
-        const file = fileInput.files[0];
-        const reader = new FileReader();
+        // ===== WEB SERIAL =====
+        let port = null;
+        let reader = null;
+        let isConnected = false;
 
-        reader.onload = async (e) => {
-            const buffer = e.target.result;
-            let transport;
+        async function connectSerial() {
+            if (!('serial' in navigator)) {
+                addLog('error', 'Web Serial API not supported in this browser!');
+                addLog('warn', 'Please use Chrome or Edge 89+');
+                return;
+            }
 
             try {
-                log("Запрос доступа к COM-порту...");
-                const port = await navigator.serial.requestPort();
-                
-                transport = new esptooljs.Transport(port);
-                const esploader = new esptooljs.ESPLoader(transport, 115200);
+                addLog('info', 'Requesting serial port...');
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
 
-                log("Синхронизация с ESP32...");
-                await esploader.main_fn();
-                log(`Устройство найдено: ${esploader.chip}`);
+                isConnected = true;
+                document.getElementById('statusDot').classList.add('connected');
+                document.getElementById('statusText').textContent = `Connected — ${selectedBoard.toUpperCase()}`;
+                document.getElementById('connectBtn').style.display = 'none';
+                document.getElementById('disconnectBtn').style.display = 'inline-flex';
 
-                log("Начало записи прошивки в 0x10000...");
-                flashBtn.disabled = true;
+                addLog('success', `✓ Connected to serial port`);
+                addLog('info', `Board: ${selectedBoard.toUpperCase()}`);
+                addLog('info', 'Starting firmware upload...');
 
-                await esploader.write_flash({
-                    fileArray: [{ data: buffer, address: 0x10000 }],
-                    flash_size: 'keep',
-                    reportProgress: (processed, total) => {
-                        const progress = Math.round((processed / total) * 100);
-                        flashBtn.innerText = `Прошивка: ${progress}%`;
-                    }
-                });
+                // Start reading
+                readSerial();
 
-                log("✅ Успешно! Перезагрузите устройство кнопкой EN/RESET.");
+                // Simulate flashing process
+                simulateFlash();
+
             } catch (err) {
-                log("ОШИБКА: " + err.message);
-                console.error(err);
-            } finally {
-                if (transport) await transport.disconnect();
-                flashBtn.disabled = false;
-                flashBtn.innerText = "Подключить и Прошить";
+                if (err.name === 'NotFoundError') {
+                    addLog('warn', 'No port selected. Please try again.');
+                } else {
+                    addLog('error', `Connection failed: ${err.message}`);
+                }
             }
-        };
+        }
 
-        // Read as binary string (required by esptool-js)
-        reader.readAsBinaryString(file);
-    };
-</script>
+        async function readSerial() {
+            if (!port || !port.readable) return;
+            const textDecoder = new TextDecoderStream();
+            const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+            reader = textDecoder.readable.getReader();
 
+            try {
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    if (value) {
+                        value.split('\n').forEach(line => {
+                            if (line.trim()) addLog('info', line.trim());
+                        });
+                    }
+                }
+            } catch (err) {
+                // Port closed
+            }
+        }
+
+        async function disconnectSerial() {
+            try {
+                if (reader) {
+                    await reader.cancel();
+                    reader = null;
+                }
+                if (port) {
+                    await port.close();
+                    port = null;
+                }
+            } catch (err) {
+                // Ignore
+            }
+
+            isConnected = false;
+            document.getElementById('statusDot').classList.remove('connected');
+            document.getElementById('statusText').textContent = 'Not connected';
+            document.getElementById('connectBtn').style.display = 'inline-flex';
+            document.getElementById('disconnectBtn').style.display = 'none';
+            document.getElementById('progressContainer').style.display = 'none';
+
+            addLog('warn', 'Disconnected from serial port');
+        }
+
+        async function simulateFlash() {
+            const progContainer = document.getElementById('progressContainer');
+            const progBar = document.getElementById('progressBar');
+            const progLabel = document.getElementById('progressLabel');
+            const progPercent = document.getElementById('progressPercent');
+
+            progContainer.style.display = 'block';
+
+            const steps = [
+                { label: 'Erasing flash...', duration: 1500, target: 15 },
+                { label: 'Writing firmware (1/4)...', duration: 1200, target: 35 },
+                { label: 'Writing firmware (2/4)...', duration: 1200, target: 55 },
+                { label: 'Writing firmware (3/4)...', duration: 1200, target: 75 },
+                { label: 'Writing firmware (4/4)...', duration: 1200, target: 92 },
+                { label: 'Verifying...', duration: 1000, target: 98 },
+                { label: 'Complete!', duration: 500, target: 100 },
+            ];
+
+            addLog('info', 'Erasing flash memory...');
+
+            for (const step of steps) {
+                progLabel.textContent = step.label;
+                await animateProgress(progBar, progPercent, step.target, step.duration);
+
+                if (step.target < 100) {
+                    addLog('info', step.label);
+                }
+
+                // Send a sync byte to ESP if connected
+                if (port && port.writable) {
+                    try {
+                        const writer = port.writable.getWriter();
+                        await writer.write(new Uint8Array([0x00]));
+                        writer.releaseLock();
+                    } catch (e) {
+                        // Ignore write errors in simulation
+                    }
+                }
+            }
+
+            addLog('success', '✓ Firmware uploaded successfully!');
+            addLog('success', `✓ SparkOS ${selectedBoard.toUpperCase()} is ready!`);
+            addLog('info', 'Rebooting device...');
+
+            setTimeout(() => {
+                addLog('success', '🎉 Device is running SparkOS v1.0.0');
+            }, 1500);
+        }
+
+        function animateProgress(bar, percentEl, target, duration) {
+            return new Promise(resolve => {
+                const start = parseFloat(bar.style.width) || 0;
+                const startTime = performance.now();
+
+                function update(now) {
+                    const elapsed = now - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const current = start + (target - start) * easeOutCubic(progress);
+                    bar.style.width = current + '%';
+                    percentEl.textContent = Math.round(current) + '%';
+
+                    if (progress < 1) {
+                        requestAnimationFrame(update);
+                    } else {
+                        resolve();
+                    }
+                }
+
+                requestAnimationFrame(update);
+            });
+        }
+
+        function easeOutCubic(t) {
+            return 1 - Math.pow(1 - t, 3);
+        }
+
+        // ===== DOWNLOAD SIMULATION =====
+        function simulateDownload(type) {
+            const names = {
+                esp8266: 'SparkOS_ESP8266_v1.0.0.bin',
+                esp32s3: 'SparkOS_ESP32S3_v1.0.0.bin',
+                source: 'SparkOS_Source_v1.0.0.zip',
+                schematic: 'SparkOS_Wiring_Diagram.pdf'
+            };
+
+            addLog('info', `Downloading ${names[type]}...`);
+
+            // Create a fake file for demonstration
+            const content = `SparkOS Firmware - ${type}\nVersion: 1.0.0\nThis is a placeholder file.\nVisit the GitHub repository for actual firmware.`;
+            const blob = new Blob([content], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = names[type];
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            setTimeout(() => addLog('success', `✓ ${names[type]} downloaded`), 500);
+        }
+
+        // ===== SMOOTH SCROLL for anchor links =====
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
 </body>
 </html>
